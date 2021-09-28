@@ -97,6 +97,15 @@ class TestQuerying(AuthenticatedTestCase):
 
         self.assertTrue(report.rows)
 
+    def test_multiple_dimensions(self):
+        """ It should return more rows for multiple dimensions. This addresses issues
+        noted here: https://productforums.google.com/forum/#!msg/webmasters/PKNGqSo1t
+        Kc/lAE0hcdGCQAJ """
+        a = self.query.range('today', days=-7).dimension('query').get()
+        b = self.query.range('today', days=-7).dimension('query', 'date').get()
+
+        self.assertGreater(len(b), len(a))
+
     def test_range(self):
         """ It should handle different date types. """
         a = self.query.range(start='2017-01-01', stop='2017-01-03')
@@ -131,6 +140,11 @@ class TestQuerying(AuthenticatedTestCase):
         b = self.query.range(yesterday, days=-1)
 
         self.assertEqual(a.raw['endDate'], b.raw['endDate'])
+
+    def test_search_type(self):
+        """ It should be able to filter for the specific search type. """
+        a = self.query.search_type('image')
+        self.assertEqual(a.raw['searchType'], 'image')
 
     def test_immutable(self):
         """ Queries should be refined by creating a new query instance not
@@ -173,6 +187,7 @@ def load_tests(loader, tests, ignore):
     globs = {
         'account': account,
         'webproperty': account[webproperty_uri],
+        'www_webproperty_com': webproperty_uri,
         'query': account[webproperty_uri].query
     }
 

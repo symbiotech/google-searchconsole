@@ -47,7 +47,7 @@ class Query:
     def __init__(self, api, parameters=None, metadata=None):
         self.raw = {
             'startRow': 0,
-            'rowLimit': 5000
+            'rowLimit': 25000
         }
 
         self.meta = {}
@@ -159,6 +159,52 @@ class Query:
         return self
 
     @utils.immutable
+    def search_type(self, search_type):
+        """
+        Return a new query that filters for the specified search type.
+        Args:
+            search_type (str): The search type you would like to report on.
+                Possible values: 'web' (default), 'image', 'video'.
+
+        Returns:
+            `searchconsole.query.Query`
+
+        Usage:
+            >>> query.search_type('image')
+            <searchconsole.query.Query(...)>
+        """
+
+        self.raw['searchType'] = search_type
+
+        return self
+
+    @utils.immutable
+    def data_state(self, data_state):
+        """
+        Return a new query filtered by the specified data_state, which allows you 
+        to include fresh (not finalized) data in your API call.  
+
+        Fresh data: data as recent as less than a day old. Fresh data point can 
+        be replaced with the final data point after a few days. 
+
+        Args:
+            data_state (str): The data_state you would like to use for your report. 
+                Possible values: 'final' (default - only finalized data), 
+                'all' (finalized & fresh data).
+
+        Returns:
+            `searchconsole.query.Query`
+
+        Usage:
+            >>> query.data_state('final')
+            <searchconsole.query.Query(...)>
+        """
+
+        self.raw['dataState'] = data_state
+
+        return self
+
+    @utils.immutable
     def limit(self, *limit_):
         """
         Return a new query limiting the number of rows returned. It can also
@@ -187,7 +233,7 @@ class Query:
 
         self.raw.update({
             'startRow': start,
-            'rowLimit': min(5000, maximum)
+            'rowLimit': min(25000, maximum)
         })
 
         return self
@@ -205,8 +251,8 @@ class Query:
     @utils.immutable
     def next(self):
 
-        step = self.raw.get('rowLimit', 5000)
-        start = self.raw.get('startRow', 0) + step + 1
+        step = self.raw.get('rowLimit', 25000)
+        start = self.raw.get('startRow', 0) + step
         self.raw['startRow'] = start
 
         return self
@@ -301,9 +347,9 @@ class Report:
         self.raw.append(raw)
         self.queries.append(query)
 
-        step = query.raw.get('rowLimit', 5000)
+        step = query.raw.get('rowLimit', 25000)
         rows = raw.get('rows', [])
-        self.is_complete = len(rows) < step
+        self.is_complete = not rows
 
         for row in self.raw[-1].get('rows', []):
             row = row.copy()

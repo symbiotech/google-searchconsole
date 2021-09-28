@@ -22,7 +22,7 @@ from .account import Account
 
 
 def authenticate(client_config=None, credentials=None, service_account=None,
-                 serialize=None):
+                 serialize=None, flow="web"):
     """
     The `authenticate` function will authenticate a user with the Google Search
     Console API.
@@ -35,6 +35,8 @@ def authenticate(client_config=None, credentials=None, service_account=None,
         service_account (collections.abc.Mapping or str): Path OAuth2 service
             account credentials.
         serialize (str): Path to where credentials should be serialized.
+        flow (str): Authentication environment. Specify "console" for environments (like Google Colab)
+            where the standard "web" flow isn't possible.
 
     Returns:
         `searchconsole.account.Account`: Account object containing web
@@ -69,14 +71,14 @@ def authenticate(client_config=None, credentials=None, service_account=None,
 
         if isinstance(client_config, collections.abc.Mapping):
 
-            flow = InstalledAppFlow.from_client_config(
+            auth_flow = InstalledAppFlow.from_client_config(
                 client_config=client_config,
                 scopes=['https://www.googleapis.com/auth/webmasters.readonly']
             )
 
         elif isinstance(client_config, str):
 
-            flow = InstalledAppFlow.from_client_secrets_file(
+            auth_flow = InstalledAppFlow.from_client_secrets_file(
                 client_secrets_file=client_config,
                 scopes=['https://www.googleapis.com/auth/webmasters.readonly']
             )
@@ -84,8 +86,14 @@ def authenticate(client_config=None, credentials=None, service_account=None,
         else:
             raise ValueError("Client secrets must be a mapping or path to file")
 
-        flow.run_local_server()
-        credentials = flow.credentials
+        if flow == "web":
+            auth_flow.run_local_server()
+        elif flow == "console":
+            auth_flow.run_console()
+        else:
+            raise ValueError("Authentication flow '{}' not supported".format(flow))
+
+        credentials = auth_flow.credentials
 
     elif service_account:
 
@@ -104,8 +112,8 @@ def authenticate(client_config=None, credentials=None, service_account=None,
 
 
     service = discovery.build(
-        serviceName='webmasters',
-        version='v3',
+        serviceName='searchconsole',
+        version='v1',
         credentials=credentials,
         cache_discovery=False,
     )
@@ -143,5 +151,4 @@ def serialize_credentials(credentials, path):
             json.dump(serialized, f)
 
     else:
-
         raise TypeError('`serialize` must be a path.')
